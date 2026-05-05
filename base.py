@@ -1,7 +1,6 @@
 import requests
 from dotenv import load_dotenv
 import os
-import json
 
 load_dotenv()
 
@@ -41,14 +40,9 @@ class Bot:
 
 
     def proccess_message(self, message):
-        if "прив" in message["message"]["text"]:
-            chat_id = message["message"]["chat"]["id"]
-
-            self.send_message(chat_id, "UwU")
-        else:
-            print(message)
-
-    
+        print(message)
+        
+            
     def get_updates(self):
         offset = 0
 
