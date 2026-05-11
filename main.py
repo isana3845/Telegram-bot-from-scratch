@@ -1,8 +1,24 @@
 import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import os
 
+
+load_dotenv()
+
+session = requests.Session()
 
 url = "https://univer.dvfu.ru/schedule/get"
+
+login_headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+}
+
+login_page = session.get("https://esa.dvfu.ru/", headers=login_headers)
+soup = BeautifulSoup(login_page.text, "html.parser")
 
 date = datetime.now()
 start = date - timedelta((date.weekday() + 1) % 7)
@@ -26,7 +42,7 @@ headers = {
     "X-Requested-With": "XMLHttpRequest"
 }
 
-response = requests.get(url, params=params, headers=headers)
+response = session.get(url, params=params, headers=headers)
 
 try:
     for i in range(len(response.json()["events"])):
