@@ -10,6 +10,7 @@ class Bot:
     def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
+        self.handlers = ...
     
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
@@ -40,7 +41,12 @@ class Bot:
 
 
     def proccess_message(self, message):
-        print(message)
+        if "прив" in message["message"]["text"]:
+            chat_id = message["message"]["chat"]["id"]
+
+            self.send_message(chat_id, "UwU")
+        else:
+            print(message)
         
             
     def get_updates(self):

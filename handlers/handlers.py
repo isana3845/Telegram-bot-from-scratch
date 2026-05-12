@@ -1,40 +1,31 @@
-import re
+from typing import Callable, Optional
+
 
 class Handler:
     def __init__(self):
-        self.handlers = {
-            'text': [],
-            'command': [],
-            'callback': [],
-            'photo': [],
-            'video': [],
-            'document': [],
-            'any': []
-        }
+        self.handlers = []
         self.middlewares = []
     
-    def command(self, command):
-        def decorator(func):
-            self.handlers['command'].append({
-                'command': command,
-                'function': func,
-                'pattern': None
+    def on(self, msg_type: str = 'any', **filters):
+        def decorator(func: Callable):
+            self.handlers.append({
+                'type': msg_type, #тип сообщения, either its command or a photo
+                'function': func, #ссылка на исполняемую фнукицию
+                'filters': filters, #сюда по идее записываются паттерны, команды и т.д.
+                'priority': filters.get('priority', 0) #priority which is given to handler, by dedault it's 0
             })
+            self.handlers.sort(key=lambda x: x['priority'], reverse=True) #here wa're sorting by priority 
             return func
         return decorator
     
-    def on_text(self, pattern):
-        def decorator(func):
-            self.handlers['text'].append({
-                'command': None,
-                'function': func,
-                'pattern': re.compile(pattern) if pattern else None
-            })
-            return func
-        return decorator
-
+    def command(self, command: str):
+        return self.on('command', command=command) #handler to handle, bruh, commands
+    
+    def on_text(self, pattern: Optional[str] = None):
+        return self.on('text', pattern=pattern) #im not explaining this one
+    
+    def on_photo(self):
+        return self.on('photo') #mhm
+    
     def on_any(self):
-        def decorator(func):
-            self.handlers['any'].append({'function': func})
-    
-
+        return self.on('any') #duh
