@@ -1,7 +1,6 @@
 import requests
 from dotenv import load_dotenv
 import os
-from schedule import get_schedule
 
 
 load_dotenv()
@@ -12,13 +11,22 @@ class Bot:
     def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
+        self.handlers = {}
+
+    
+    def command(self, cmd):
+        def decorator(func):
+            self.handlers[cmd] = func
+
+            return func
+        return decorator
     
 
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
 
 
-    def _requests(self, method, params):
+    def _requests(self, method, params=None):
         url = f'{self.bot}/{method}'
 
         try:
@@ -31,7 +39,7 @@ class Bot:
 
             return response.json()
         except Exception as e:
-            print(f"error: {e}")
+            print(f"Error: {e}")
 
 
     def send_message(self, chat_id, text):
@@ -43,16 +51,15 @@ class Bot:
         return self._requests("sendMessage", params=params)
 
 
-    def proccess_message(self, message):
-        if "прив" in message["message"]["text"].lower():
-            chat_id = message["message"]["chat"]["id"]
-            self.send_message(chat_id, "UwU")
-        elif "расписани" in message["message"]["text"].lower():
-            chat_id = message["message"]["chat"]["id"]
-            self.send_message(chat_id, get_schedule())
-        else:
-            chat_id = message["message"]["chat"]["id"]
-            self.send_message(chat_id, message["message"]["text"])
+    def proccess_message(self, message: dict):
+        message = message.get("message", {})
+        text = message.get("text", "")
+        chat_id = message["chat"]["id"]
+
+        if text.startswith("/"):
+            cmd = text[1:].split()[0]
+            if cmd in self.handlers:
+                self.handlers[cmd](chat_id)
 
             
     def get_updates(self):
@@ -74,6 +81,6 @@ class Bot:
                 print(f"Ошибка: {e}")
 
 
-bot = Bot(BOT_TOKEN)
+# bot = Bot(BOT_TOKEN)
 
-bot.get_updates()
+# bot.get_updates()

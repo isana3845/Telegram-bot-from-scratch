@@ -1,5 +1,6 @@
 import re
 
+
 class Handler:
     def __init__(self):
         self.handlers = {
@@ -13,6 +14,7 @@ class Handler:
         }
         self.middlewares = []
     
+
     def command(self, command):
         def decorator(func):
             self.handlers['command'].append({
@@ -23,6 +25,7 @@ class Handler:
             return func
         return decorator
     
+
     def on_text(self, pattern):
         def decorator(func):
             self.handlers['text'].append({
@@ -32,6 +35,7 @@ class Handler:
             })
             return func
         return decorator
+
 
     def on_any(self):
         def decorator(func):
