@@ -1,7 +1,8 @@
 import requests
 from dotenv import load_dotenv
 import os
-import json
+from schedule import get_schedule
+
 
 load_dotenv()
 
@@ -12,8 +13,10 @@ class Bot:
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
     
+
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
+
 
     def _requests(self, method, params):
         url = f'{self.bot}/{method}'
@@ -41,14 +44,17 @@ class Bot:
 
 
     def proccess_message(self, message):
-        if "прив" in message["message"]["text"]:
+        if "прив" in message["message"]["text"].lower():
             chat_id = message["message"]["chat"]["id"]
-
             self.send_message(chat_id, "UwU")
+        elif "расписани" in message["message"]["text"].lower():
+            chat_id = message["message"]["chat"]["id"]
+            self.send_message(chat_id, get_schedule())
         else:
-            print(message)
+            chat_id = message["message"]["chat"]["id"]
+            self.send_message(chat_id, message["message"]["text"])
 
-    
+            
     def get_updates(self):
         offset = 0
 
