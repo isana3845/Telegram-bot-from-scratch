@@ -1,16 +1,14 @@
 import requests
 from dotenv import load_dotenv
+from handlers.handlers import Handler
 import os
 
-load_dotenv()
-
-BOT_TOKEN = os.getenv("KEY")
 
 class Bot:
     def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
-        self.handlers = ...
+        self.handlers = Handler()
     
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
@@ -41,12 +39,9 @@ class Bot:
 
 
     def proccess_message(self, message):
-        if "прив" in message["message"]["text"]:
-            chat_id = message["message"]["chat"]["id"]
-
-            self.send_message(chat_id, "UwU")
-        else:
-            print(message)
+        response = self.handlers.handle_message(message)
+        print(response)
+        return response
         
             
     def get_updates(self):
@@ -60,14 +55,10 @@ class Bot:
 
                 if response["result"]:
                     for update in response["result"]:
-                        self.proccess_message(update)
+                        print(update)
+                        self.proccess_message(update['message'])
                 
                         offset = update["update_id"] + 1
                 
             except Exception as e:
                 print(f"Ошибка: {e}")
-
-
-bot = Bot(BOT_TOKEN)
-
-bot.get_updates()
