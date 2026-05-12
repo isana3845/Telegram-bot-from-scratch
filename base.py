@@ -11,17 +11,8 @@ class Bot:
     def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
-        self.handlers = {}
-
+        self.handlers = ...
     
-    def command(self, cmd):
-        def decorator(func):
-            self.handlers[cmd] = func
-
-            return func
-        return decorator
-    
-
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
 
@@ -51,16 +42,9 @@ class Bot:
         return self._requests("sendMessage", params=params)
 
 
-    def proccess_message(self, message: dict):
-        message = message.get("message", {})
-        text = message.get("text", "")
-        chat_id = message["chat"]["id"]
-
-        if text.startswith("/"):
-            cmd = text[1:].split()[0]
-            if cmd in self.handlers:
-                self.handlers[cmd](chat_id)
-
+    def proccess_message(self, message):
+        print(message)
+        
             
     def get_updates(self):
         offset = 0

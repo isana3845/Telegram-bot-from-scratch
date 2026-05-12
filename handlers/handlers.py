@@ -1,3 +1,4 @@
+from typing import Callable, Optional
 import re
 
 
@@ -41,4 +42,3 @@ class Handler:
         def decorator(func):
             self.handlers['any'].append({'function': func})
     
-
