@@ -1,22 +1,50 @@
-from base import Bot
-from schedule import get_schedule
-from dotenv import load_dotenv
-import os
+import requests
+from datetime import datetime, timedelta
 
 
-load_dotenv()
+def get_schedule():
+    session = requests.Session()
+    session.get("https://univer.dvfu.ru/schedule")
 
-bot = Bot(os.getenv("KEY"))
+    date = datetime.now()
+    start = date - timedelta((date.weekday() + 1) % 7)
+    end = start + timedelta(6)
 
+    response = session.get(
+        "https://univer.dvfu.ru/schedule/get",
+        params={
+            "type": "agendaWeek",
+            "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
+            "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
+            "groups[]": "6886",
+            "ppsGuid": "",
+            "facilityId": 0
+        },
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json",
+            "Referer": "https://univer.dvfu.ru/schedule",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    )
 
-@bot.command("start")
-def start(chat_id):
-    bot.send_message(chat_id, "Message") 
+    events = response.json().get("events", [])
+    
+    days = {}
+    for event in events:
+        day = event["start"][:10]
+        days.setdefault(day, []).append(event)
 
+    day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+    lines = []
+    for day in sorted(days):
+        dt = datetime.strptime(day, "%Y-%m-%d")
+        lines.append(f"📅 {day_names[dt.weekday()]} {dt.strftime('%d.%m')}")
+        lines.append("-" * 70)
 
-@bot.command("schedule")
-def schedule(chat_id):
-    bot.send_message(chat_id, get_schedule())
+        for e in sorted(days[day], key=lambda x: x["start"]):
+            lines.append(f"  {e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
+            lines.append(f"  {e['title']} | {e['classroom']}\n")
+        lines.append("\n\n")
 
-
-bot.get_updates()
+    return "\n".join(lines)
