@@ -9,6 +9,12 @@ BOT_TOKEN = os.getenv("KEY")
 
 bot = Bot(BOT_TOKEN)
 
+@bot.handlers.command("/start", priority=1000)
+def meow(message):
+    chat_id = message["chat"]["id"]
+    bot.send_message(chat_id, "Я дура")
+    bot.send_photo(chat_id, "123.png")
+
 @bot.handlers.command("/meow", priority=100)
 def meow(message):
     chat_id = message["chat"]["id"]
@@ -23,5 +29,10 @@ def schedule(message):
 def uwu(message):
     chat_id = message["chat"]["id"]
     bot.send_message(chat_id, "UwU")
+
+@bot.handlers.on_any()
+def bitch(message):
+    chat_id = message["chat"]["id"]
+    bot.send_message(chat_id, "OWO")
 
 bot.get_updates()
