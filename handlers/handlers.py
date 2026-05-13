@@ -1,42 +1,43 @@
 from typing import Callable, Optional, Dict, Any
 
+
 class Handler:
     def __init__(self):
-        self.handlers = {
-            'text': [],
-            'command': [],
-            'callback': [],
-            'photo': [],
-            'video': [],
-            'document': [],
-            'any': []
-        }
-        self.middlewares = []
+        self.handlers = []
     
+
     def on(self, msg_type: str = 'any', **filters):
         def decorator(func: Callable):
-            self.handlers.append({
+            self.handlers.append(
+                {
                 'type': msg_type,
                 'function': func,
                 'filters': filters,
                 'priority': filters.get('priority', 0)
-            })
+                }
+            )
             self.handlers.sort(key=lambda x: x['priority'], reverse=True)
+
             return func
         return decorator
     
+
     def command(self, command: str, priority: str = 0):
         return self.on('command', command=command, priority=priority)
     
+
     def on_text(self, pattern: Optional[str] = None, priority: str = 0):
         return self.on('text', pattern=pattern, priority=priority)
     
+
     def on_photo(self):
         return self.on('photo')
+    
     
     def on_any(self):
         return self.on('any')
     
+
     def handle_message(self, message: Dict[str, Any]):
         text = message.get('text', '')
         is_command = text.startswith('/') if text else False

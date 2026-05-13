@@ -10,6 +10,7 @@ class Bot:
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
         self.handlers = Handler()
     
+    
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
 

@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 from base import Bot
-from main import get_schedule
+from schedule import get_schedule
 
 load_dotenv()
 
@@ -9,19 +9,23 @@ BOT_TOKEN = os.getenv("KEY")
 
 bot = Bot(BOT_TOKEN)
 
+
 @bot.handlers.command("/meow", priority=100)
 def meow(message):
     chat_id = message["chat"]["id"]
     bot.send_message(chat_id, "meow meow meow")
+
 
 @bot.handlers.command("/schedule", priority=0)
 def schedule(message):
     chat_id = message["chat"]["id"]
     bot.send_message(chat_id, get_schedule())
 
+
 @bot.handlers.on_text(":3", priority=1000)
 def uwu(message):
     chat_id = message["chat"]["id"]
     bot.send_message(chat_id, "UwU")
+
 
 bot.get_updates()

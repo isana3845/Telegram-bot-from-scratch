@@ -1,50 +1,30 @@
-import requests
-from datetime import datetime, timedelta
+from dotenv import load_dotenv
+import os
+from base import Bot
+from schedule import get_schedule
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("KEY")
+bot = Bot(BOT_TOKEN)
 
 
-def get_schedule():
-    session = requests.Session()
-    session.get("https://univer.dvfu.ru/schedule")
+@bot.handlers.command("/meow", priority=100)
+def meow(message):
+    chat_id = message["chat"]["id"]
+    bot.send_message(chat_id, "meow meow meow")
 
-    date = datetime.now()
-    start = date - timedelta((date.weekday() + 1) % 7)
-    end = start + timedelta(6)
 
-    response = session.get(
-        "https://univer.dvfu.ru/schedule/get",
-        params={
-            "type": "agendaWeek",
-            "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "groups[]": "6886",
-            "ppsGuid": "",
-            "facilityId": 0
-        },
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json",
-            "Referer": "https://univer.dvfu.ru/schedule",
-            "X-Requested-With": "XMLHttpRequest"
-        }
-    )
+@bot.handlers.command("/schedule", priority=0)
+def schedule(message):
+    chat_id = message["chat"]["id"]
+    bot.send_message(chat_id, get_schedule())
 
-    events = response.json().get("events", [])
-    
-    days = {}
-    for event in events:
-        day = event["start"][:10]
-        days.setdefault(day, []).append(event)
 
-    day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-    lines = []
-    for day in sorted(days):
-        dt = datetime.strptime(day, "%Y-%m-%d")
-        lines.append(f"📅 {day_names[dt.weekday()]} {dt.strftime('%d.%m')}")
-        lines.append("-" * 70)
+@bot.handlers.on_text(":3", priority=1000)
+def uwu(message):
+    chat_id = message["chat"]["id"]
+    bot.send_message(chat_id, "UwU")
 
-        for e in sorted(days[day], key=lambda x: x["start"]):
-            lines.append(f"  {e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
-            lines.append(f"  {e['title']} | {e['classroom']}\n")
-        lines.append("\n\n")
 
-    return "\n".join(lines)
+bot.get_updates()

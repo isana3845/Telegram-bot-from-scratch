@@ -40,7 +40,7 @@ def get_schedule():
     for day in sorted(days):
         dt = datetime.strptime(day, "%Y-%m-%d")
         lines.append(f"📅 {day_names[dt.weekday()]} {dt.strftime('%d.%m')}")
-        lines.append("-" * 70)
+        lines.append("-" * 60)
 
         for e in sorted(days[day], key=lambda x: x["start"]):
             lines.append(f"  {e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
