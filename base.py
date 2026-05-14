@@ -1,4 +1,6 @@
 import requests
+import asyncio
+from typing import Callable, Optional, Dict, Any
 from dotenv import load_dotenv
 from handlers.handlers import Handler
 import os
@@ -12,6 +14,20 @@ class Bot:
     
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
+    
+    def get_file(self, message: Dict[str, Any], save_path = ""):
+        try:
+            photo = message.get("photo", "")
+            if photo:
+                file_path = requests.get(f"{self.bot}/getFile?file_id={photo[-1]['file_id']}").json()
+                if file_path:
+                    file_name = file_path['result']['file_path'].split("/")[-1]
+                    response = requests.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}")
+                    with open(f"{save_path}/{file_name}".strip("/"), "wb") as f:
+                        f.write(response.content)
+                    return response
+        except Exception as e:
+            return f"Error: {e}"
 
     def _requests(self, method, params):
         url = f'{self.bot}/{method}'
@@ -48,7 +64,6 @@ class Bot:
 
     def proccess_message(self, message):
         response = self.handlers.handle_message(message)
-        print(response)
         return response
         
             
@@ -63,7 +78,6 @@ class Bot:
 
                 if response["result"]:
                     for update in response["result"]:
-                        print(update)
                         self.proccess_message(update['message'])
                 
                         offset = update["update_id"] + 1
