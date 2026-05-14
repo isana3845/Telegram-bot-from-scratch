@@ -2,7 +2,7 @@ import aiohttp
 import asyncio
 
 from dotenv import load_dotenv
-from handlers.handlers import Handler
+from handlers.handlers import AHandler
 import os
 
 
@@ -10,7 +10,7 @@ class AsyncBot:
     def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
-        self.handlers = Handler()
+        self.handlers = AHandler()
         self.session = None
 
     async def start_session(self):
