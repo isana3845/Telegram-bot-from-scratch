@@ -1,0 +1,97 @@
+import aiohttp
+import asyncio
+
+from dotenv import load_dotenv
+from handlers.handlers import Handler
+import os
+
+
+class AsyncBot:
+    def __init__(self, bot_token):
+        self.bot_token = bot_token
+        self.bot = f"https://api.telegram.org/bot{self.bot_token}"
+        self.handlers = Handler()
+        self.session = None
+
+    async def start_session(self):
+        self.session = aiohttp.ClientSession()
+
+    async def close_session(self):
+        if self.session:
+            await self.session.close()
+
+    async def _aiohttp(self, method, json_data):
+        if not self.session:
+            raise Exception
+        
+        url = f'{self.bot}/{method}'
+
+        try:
+            if json_data:
+                async with self.session.post(url, json=json_data) as asi:
+                    asi.raise_for_status()
+                    return await asi.json()
+            else:
+                async with self.session.get(url) as asi:
+                    asi.raise_for_status()
+                    return await asi.json()
+            
+        except Exception as e:
+            print(f"error: {e}")
+
+
+    async def send_message(self, chat_id, text):
+        data = {
+            "chat_id": chat_id,
+            "text": text
+        }
+
+        return await self._aiohttp("sendMessage", json_data=data)
+
+    async def send_photo(self, chat_id, photo_path):
+        if not self.session:
+            raise Exception
+        
+        url = f"{self.bot}/sendPhoto"
+        try:
+            with open(photo_path, 'rb') as photo:
+                files = {'photo': photo}
+                data = {'chat_id': chat_id}
+                async with self.session.post(url, files=files, data=data) as aio:
+                    return await aio.json()
+                
+        except Exception as e:
+            print(f"error: {e}")
+        
+
+    async def proccess_message(self, message):
+        response = await self.handlers.handle_message(message)
+        print(response)
+        return response
+        
+            
+    async def get_updates(self):
+        if not self.session:
+            raise Exception
+        
+        offset = 0
+
+        while True:
+            try:
+                params = {'offset': offset, 'timeout': 30}
+
+                async with self.session.get(f"{self.bot}/getUpdates", params=params) as aio:
+                    response = await aio.json()
+
+                if response["result"]:
+                    for update in response["result"]:
+                        print(update)
+                        await self.proccess_message(update['message'])
+                
+                        offset = update["update_id"] + 1
+
+                await asyncio.sleep(0.1)
+                
+            except Exception as e:
+                print(f"Ошибка: {e}")
+                await asyncio.sleep(5) #чтобы не спамить запросами
