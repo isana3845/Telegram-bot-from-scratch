@@ -9,6 +9,7 @@ BOT_TOKEN = os.getenv("KEY")
 
 bot = Bot(BOT_TOKEN)
 
+
 @bot.handlers.command("/start")
 def meow(message):
     chat_id = message["chat"]["id"]
