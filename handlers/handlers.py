@@ -3,7 +3,6 @@ from typing import Callable, Optional, Dict, Any
 class Handler:
     def __init__(self):
         self.handlers = []
-        self.middlewares = []
     
     def on(self, msg_type: str = 'any', **filters):
         def decorator(func: Callable):
