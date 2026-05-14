@@ -1,6 +1,6 @@
 import aiohttp
 import asyncio
-
+from typing import Callable, Optional, Dict, Any
 from dotenv import load_dotenv
 from handlers.handlers import AHandler
 import os
@@ -19,6 +19,26 @@ class AsyncBot:
     async def close_session(self):
         if self.session:
             await self.session.close()
+
+    async def get_file(self, message: Dict[str, Any], save_path = ""):
+        try:
+            photo = message.get("photo", "")
+
+            if photo: 
+                #информация о фото
+                async with self.session.get(f"{self.bot}/getFile?file_id={photo[-1]['file_id']}") as aio:
+                    file_path = await aio.json()
+                
+                if file_path:
+                    file_name = file_path['result']['file_path'].split("/")[-1]
+                    async with self.session.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}") as aii:
+                        response = await aii.read()
+                    # response = requests.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}")
+                    with open(f"{save_path}/{file_name}".strip("/"), "wb") as f:
+                        f.write(response)
+                    return response
+        except Exception as e:
+            return f"Error: {e}"
 
     async def _aiohttp(self, method, json_data):
         if not self.session:
