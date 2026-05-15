@@ -7,7 +7,7 @@ from handlers.handlers import Handler
 import os
 
 class InlineKeyboard:
-    def init(self):
+    def __init__(self):
         self.list_with_buttons = []
         self.keyboard = {
             'inline_keyboard': [self.list_with_buttons]
