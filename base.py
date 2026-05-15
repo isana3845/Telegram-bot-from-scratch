@@ -22,7 +22,7 @@ class InlineKeyboard:
 
 
 class Bot:
-    def init(self, bot_token):
+    def __init__(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
         self.handlers = Handler()
