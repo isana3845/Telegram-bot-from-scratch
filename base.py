@@ -1,14 +1,28 @@
 import requests
 import asyncio
+import json
 from typing import Callable, Optional, Dict, Any
 from dotenv import load_dotenv
 from handlers.handlers import Handler
 import os
 
+class InlineKeyboard:
+    def init(self):
+        self.list_with_buttons = []
+        self.keyboard = {
+            'inline_keyboard': [self.list_with_buttons]
+            }
+    
+    def add_button(self, text, callback_data = "", url = ""):
+        button = {'text': text, "callback_data": callback_data, "url": url}
+        self.list_with_buttons.append(button)
+
+    def call(self):
+        return self.keyboard
 
 
 class Bot:
-    def __init__(self, bot_token):
+    def init(self, bot_token):
         self.bot_token = bot_token
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
         self.handlers = Handler()
@@ -44,13 +58,19 @@ class Bot:
             return response.json()
         except Exception as e:
             print(f"error: {e}")
+    def send_poll(self, chat_id, question, *args):
+          params = {
+          "chat_id": chat_id,
+          "question": question,
+          "options": json.dumps(args)
+          }
+          
+          return self._requests("sendPoll", params)
 
-
-    def send_message(self, chat_id, text):
-        params = {
-            "chat_id": chat_id,
-            "text": text
-        }
+    def send_message(self, **params):
+        if "reply_markup" in params:
+              params["reply_markup"] = json.dumps(params["reply_markup"])
+        return self._requests("sendMessage", params=params)
 
         return self._requests("sendMessage", params=params)
 
@@ -64,24 +84,24 @@ class Bot:
         
 
     def proccess_message(self, message):
-        response = self.handlers.handle_message(message)
-        return response
+        try:
+              response = self.handlers.handle_message(message["message"])
+              return response
+        except Exception as e:
+              return {"ok": False}
         
             
     def get_updates(self):
         offset = 0
 
         while True:
-            try:
-                params = {'offset': offset, 'timeout': 30}
+              params = {'offset': offset, 'timeout': 30}
 
-                response = requests.get(f"{self.bot}/getUpdates", params=params).json()
+              response = requests.get(f"{self.bot}/getUpdates", params=params).json()
 
-                if response["result"]:
-                    for update in response["result"]:
-                        self.proccess_message(update['message'])
+              if response["result"]:
+                  for update in response["result"]:
+                      print(update)
+                      self.proccess_message(update)
                 
-                        offset = update["update_id"] + 1
-                
-            except Exception as e:
-                print(f"Ошибка: {e}")
+                      offset = update["update_id"] + 1
