@@ -6,7 +6,7 @@ from main import get_schedule
 load_dotenv()
 
 BOT_TOKEN = os.getenv("KEY")
-
+print(BOT_TOKEN)
 bot = Bot(BOT_TOKEN)
 
 keyboard = InlineKeyboard()

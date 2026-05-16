@@ -17,7 +17,7 @@ class InlineKeyboard:
         button = {'text': text, "callback_data": callback_data, "url": url}
         self.list_with_buttons.append(button)
 
-    def call(self):
+    def __call__(self):
         return self.keyboard
 
 
