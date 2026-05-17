@@ -1,8 +1,8 @@
 class InlineKeyboard:
     day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
-    def __init__(self):
-        pass
+    def __init__(self, bot):
+        self.bot = bot
 
 
     def send_keyboard(self, chat_id):
@@ -18,3 +18,5 @@ class InlineKeyboard:
                 ]
             ]
         }
+
+        

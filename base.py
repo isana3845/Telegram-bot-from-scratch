@@ -40,6 +40,15 @@ class Bot:
         return self._requests("sendMessage", params=params)
 
 
+    def send_photo(self, chat_id, photo_path):
+        url = f"{self.bot}/sendPhoto"
+        with open(photo_path, 'rb') as photo:
+            files = {'photo': photo}
+            data = {'chat_id': chat_id}
+            response = requests.post(url, files=files, data=data)
+        return response
+        
+
     def proccess_message(self, message):
         response = self.handlers.handle_message(message)
         print(response)
