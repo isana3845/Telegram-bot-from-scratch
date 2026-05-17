@@ -1,4 +1,7 @@
 import requests
+import asyncio
+import json
+from typing import Callable, Optional, Dict, Any
 from dotenv import load_dotenv
 from handlers.handlers import Handler
 import os
@@ -13,9 +16,24 @@ class Bot:
     
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
+    
+
+    def get_file(self, message: Dict[str, Any], save_path = ""):
+        try:
+            photo = message.get("photo", "")
+            if photo:
+                file_path = requests.get(f"{self.bot}/getFile?file_id={photo[-1]['file_id']}").json()
+                if file_path:
+                    file_name = file_path['result']['file_path'].split("/")[-1]
+                    response = requests.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}")
+                    with open(f"{save_path}/{file_name}".strip("/"), "wb") as f:
+                        f.write(response.content)
+                    return response
+        except Exception as e:
+            return f"Error: {e}"
 
 
-    def _requests(self, method, params=None):
+    def _requests(self, method, params):
         url = f'{self.bot}/{method}'
 
         try:
@@ -28,15 +46,22 @@ class Bot:
 
             return response.json()
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"error: {e}")
 
 
-    def send_message(self, chat_id, text):
-        params = {
-            "chat_id": chat_id,
-            "text": text
-        }
+    def send_poll(self, chat_id, question, *args):
+          params = {
+          "chat_id": chat_id,
+          "question": question,
+          "options": json.dumps(args)
+          }
+          
+          return self._requests("sendPoll", params)
 
+
+    def send_message(self, **params):
+        if "reply_markup" in params:
+              params["reply_markup"] = json.dumps(params["reply_markup"])
         return self._requests("sendMessage", params=params)
 
 
@@ -50,26 +75,31 @@ class Bot:
         
 
     def proccess_message(self, message):
-        response = self.handlers.handle_message(message)
-        print(response)
-        return response
+        try:
+              response = self.handlers.handle_message(message["message"])
+              return response
+        except Exception as e:
+              return {"ok": False}
+        
+
+    def answer_callback(self, callback_query_id):
+        return self._requests("answerCallbackQuery", {"callback_query_id": callback_query_id})
         
             
     def get_updates(self):
         offset = 0
 
         while True:
-            try:
-                params = {'offset': offset, 'timeout': 30}
+              params = {'offset': offset, 'timeout': 30}
 
-                response = requests.get(f"{self.bot}/getUpdates", params=params).json()
+              response = requests.get(f"{self.bot}/getUpdates", params=params).json()
 
-                if response["result"]:
-                    for update in response["result"]:
-                        print(update)
-                        self.proccess_message(update['message'])
-                
-                        offset = update["update_id"] + 1
-                
-            except Exception as e:
-                print(f"Ошибка: {e}")
+              for update in response.get("result", []):
+                if "message" in update:
+                    self.handlers.handle_message(update["message"])
+                elif "callback_query" in update:
+                    query = update["callback_query"]
+                    self.answer_callback(query["id"])
+                    self.handlers.handle_callback(query)
+
+                offset = update["update_id"] + 1

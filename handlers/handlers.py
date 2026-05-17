@@ -38,6 +38,18 @@ class Handler:
         return self.on('any')
     
 
+    def on_callback(self, data: str, priority: str = 0):
+        return self.on('callback', data=data, priority=priority)
+    
+
+    def handle_callback(self, query: Dict[str, Any]):
+        data = query.get("text", "")
+
+        for handler in self.handlers:
+            if handler['type'] == 'callback' and handler['filters'].get('data') == data:
+                return handler[function](query)           
+    
+
     def handle_message(self, message: Dict[str, Any]):
         text = message.get('text', '')
         is_command = text.startswith('/') if text else False
@@ -53,6 +65,9 @@ class Handler:
             print(f"  [{i}] Проверяем {handler_type} с фильтрами {filters}")
             
             # Проверка типа обработчика
+            if handler_type == 'callback':
+                continue
+            
             if handler_type == 'command':
                 if not is_command:
                     print(f"Не команда")

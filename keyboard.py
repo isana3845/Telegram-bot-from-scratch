@@ -1,22 +1,16 @@
 class InlineKeyboard:
-    day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+    def __init__(self):
+        self.rows = [[]]
+    
 
-    def __init__(self, bot):
-        self.bot = bot
+    def add_button(self, text, callback_data = "", url = ""):
+        button = {'text': text, "callback_data": callback_data, "url": url}
+        self.rows[-1].append(button)
+
+    
+    def new_row(self):
+        self.rows.append([])
 
 
-    def send_keyboard(self, chat_id):
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {"text": self.day_names[i], "callback_data": f"day_{i}"} for i in range(4)
-                ],
-                [
-                    {"text": self.day_names[4], "callback_data": "day_4"},
-                    {"text": self.day_names[5], "callback_data": "day_5"},
-                    {"text": "Вся неделя", "callback_data": "day_all"}
-                ]
-            ]
-        }
-
-        
+    def __call__(self):
+        return self.rows
