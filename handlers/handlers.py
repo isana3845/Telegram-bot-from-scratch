@@ -43,11 +43,11 @@ class Handler:
     
 
     def handle_callback(self, query: Dict[str, Any]):
-        data = query.get("text", "")
+        data = query.get("data", "")
 
         for handler in self.handlers:
             if handler['type'] == 'callback' and handler['filters'].get('data') == data:
-                return handler[function](query)           
+                return handler['function'](query)           
     
 
     def handle_message(self, message: Dict[str, Any]):

@@ -90,7 +90,7 @@ class Bot:
         offset = 0
 
         while True:
-              params = {'offset': offset, 'timeout': 30}
+              params = {'offset': offset, 'timeout': 10}
 
               response = requests.get(f"{self.bot}/getUpdates", params=params).json()
 

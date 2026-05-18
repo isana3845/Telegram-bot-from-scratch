@@ -13,4 +13,4 @@ class InlineKeyboard:
 
 
     def __call__(self):
-        return self.rows
+        return {"inline_keyboard": self.rows}

@@ -16,9 +16,11 @@ DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 keyboard = InlineKeyboard()
 for i in range(4):
     keyboard.add_button(DAY_NAMES[i], f"day_{i}")
-keyboard.new_row()
+    if i == 2:
+        keyboard.new_row()
 keyboard.add_button(DAY_NAMES[4], "day_4")
 keyboard.add_button(DAY_NAMES[5], "day_5")
+keyboard.new_row()
 keyboard.add_button("📅 Вся неделя", "day_all")
 
 
@@ -43,22 +45,28 @@ def send_day(query, day_index):
 
 
 @bot.handlers.on_callback("day_0")
-def day_0(query): send_day(query, 0)
+def day_0(query):
+    send_day(query, 0)
 
 @bot.handlers.on_callback("day_1")
-def day_1(query): send_day(query, 1)
+def day_1(query):
+    send_day(query, 1)
 
 @bot.handlers.on_callback("day_2")
-def day_2(query): send_day(query, 2)
+def day_2(query):
+    send_day(query, 2)
 
 @bot.handlers.on_callback("day_3")
-def day_3(query): send_day(query, 3)
+def day_3(query):
+    send_day(query, 3)
 
 @bot.handlers.on_callback("day_4")
-def day_4(query): send_day(query, 4)
+def day_4(query):
+    send_day(query, 4)
 
 @bot.handlers.on_callback("day_5")
-def day_5(query): send_day(query, 5)
+def day_5(query):
+    send_day(query, 5)
 
 
 @bot.handlers.on_callback("day_all")
