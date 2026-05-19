@@ -2,7 +2,6 @@ import requests
 import asyncio
 import json
 from typing import Callable, Optional, Dict, Any
-from dotenv import load_dotenv
 from handlers.handlers import Handler
 import os
 

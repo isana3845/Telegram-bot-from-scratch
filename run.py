@@ -1,13 +1,13 @@
-from dotenv import load_dotenv
+import json
 import os
 from base import Bot, InlineKeyboard
 from main import get_schedule
 
-load_dotenv()
 
-BOT_TOKEN = os.getenv("KEY")
-print(BOT_TOKEN)
+BOT_TOKEN = "8516970070:AAFm66YS2sSy4sYT11207msZraQlTLXRkac"
+
 bot = Bot(BOT_TOKEN)
+
 
 keyboard = InlineKeyboard()
 keyboard.add_button("OwO", "Bruh")
