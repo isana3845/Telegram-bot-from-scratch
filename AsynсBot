@@ -1,9 +1,27 @@
 import aiohttp
 import asyncio
+import json
 from typing import Callable, Optional, Dict, Any
 from dotenv import load_dotenv
 from handlers.handlers import AHandler
 import os
+
+class InlineKeyboard:
+    def __init__(self):
+        self.rows = [[]]
+    
+
+    def add_button(self, text, callback_data = "", url = ""):
+        button = {'text': text, "callback_data": callback_data, "url": url}
+        self.rows[-1].append(button)
+
+    
+    def new_row(self):
+        self.rows.append([])
+
+
+    def __call__(self):
+        return {"inline_keyboard": self.rows}
 
 
 class AsyncBot:
@@ -40,7 +58,7 @@ class AsyncBot:
         except Exception as e:
             return f"Error: {e}"
 
-    async def _aiohttp(self, method, json_data):
+    async def _requests(self, method, json_data):
         if not self.session:
             raise Exception
         
@@ -59,14 +77,25 @@ class AsyncBot:
         except Exception as e:
             print(f"error: {e}")
 
-
-    async def send_message(self, chat_id, text):
-        data = {
+    async def send_poll(self, chat_id, question, *args):
+            params = {
             "chat_id": chat_id,
-            "text": text
-        }
+            "question": question,
+            "options": list(args)
+            }
+            
+            return await self._requests("sendPoll", params)
+    
+    async def send_message(self, **params): #в aiohttp уже json
+        return await self._requests("sendMessage", json_data=params)
+    
+    # async def send_message(self, chat_id, text):
+    #     data = {
+    #         "chat_id": chat_id,
+    #         "text": text
+    #     }
 
-        return await self._aiohttp("sendMessage", json_data=data)
+    #     return await self._aiohttp("sendMessage", json_data=data)
 
     async def send_photo(self, chat_id, photo_path):
         if not self.session:
@@ -75,9 +104,11 @@ class AsyncBot:
         url = f"{self.bot}/sendPhoto"
         try:
             with open(photo_path, 'rb') as photo:
-                files = {'photo': photo}
-                data = {'chat_id': chat_id}
-                async with self.session.post(url, files=files, data=data) as aio:
+                form_data = aiohttp.FormData() #специальный формат для отправки файлов
+                form_data.add_field('photo', photo)
+                form_data.add_field('chat_id', str(chat_id))
+
+                async with self.session.post(url, data=form_data) as aio:
                     return await aio.json()
                 
         except Exception as e:
@@ -85,9 +116,11 @@ class AsyncBot:
         
 
     async def proccess_message(self, message):
-        response = await self.handlers.handle_message(message)
-        print(response)
-        return response
+        try:
+            response = await self.handlers.handle_message(message)
+            return response
+        except Exception as e:
+            return {"ok": False}
         
             
     async def get_updates(self):

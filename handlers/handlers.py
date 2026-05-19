@@ -7,13 +7,15 @@ class AHandler:
     
     def on(self, msg_type: str = 'any', **filters):
         def decorator(func: Callable):
-            self.handlers.append({
+            self.handlers.append(
+                {
                 'type': msg_type,
                 'function': func,
                 'filters': filters,
                 'priority': filters.get('priority', 0)
             })
             self.handlers.sort(key=lambda x: x['priority'], reverse=True)
+
             return func
         return decorator
     
@@ -28,6 +30,17 @@ class AHandler:
     
     def on_any(self):
         return self.on('any')
+    
+    def on_callback(self, data: str, priority: str = 0):
+        return self.on('callback', data=data, priority=priority)
+    
+    async def handle_callback(self, query: Dict[str, Any]):
+        data = query.get("data", "")
+
+        for handler in self.handlers:
+            if handler['type'] == 'callback' and handler['filters'].get('data') == data:
+                return await handler['function'](query)           
+    
     
     async def handle_message(self, message: Dict[str, Any]):
         text = message.get('text', '')
@@ -44,6 +57,9 @@ class AHandler:
             print(f"  [{i}] Проверяем {handler_type} с фильтрами {filters}")
             
             # Проверка типа обработчика
+            if handler_type == 'callback':
+                continue
+            
             if handler_type == 'command':
                 if not is_command:
                     print(f"Не команда")
@@ -81,12 +97,8 @@ class AHandler:
                 print(f"Подходит любой тип")
             
             # Если дошли сюда - обработчик подходит
-            result = handler['function'](message)
-            if asyncio.iscoroutine(result):
-                result = await result
-                
             print(f"{handler['function'].__name__}")
-            return result
+            return await handler['function'](message)
         
         print("Ни один обработчик не подошел")
         return None
