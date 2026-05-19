@@ -1,35 +1,36 @@
-import requests
+import asyncio
+import aiohttp
 from datetime import datetime, timedelta
 
 
-def get_schedule():
-    session = requests.Session()
-    session.get("https://univer.dvfu.ru/schedule")
+async def get_schedule():
+    async with aiohttp.ClientSession() as ses:
+        await ses.get("https://univer.dvfu.ru/schedule")
 
-    date = datetime.now()
-    start = date - timedelta((date.weekday() + 1) % 7)
-    end = start + timedelta(6)
+        date = datetime.now()
+        start = date - timedelta((date.weekday() + 1) % 7)
+        end = start + timedelta(6)
 
-    response = session.get(
-        "https://univer.dvfu.ru/schedule/get",
-        params={
-            "type": "agendaWeek",
-            "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "groups[]": "6886",
-            "ppsGuid": "",
-            "facilityId": 0
-        },
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json",
-            "Referer": "https://univer.dvfu.ru/schedule",
-            "X-Requested-With": "XMLHttpRequest"
-        }
-    )
-
-    events = response.json().get("events", [])
-    
+        async with ses.get(
+            "https://univer.dvfu.ru/schedule/get",
+            params={
+                "type": "agendaWeek",
+                "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
+                "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
+                "groups[]": "6886",
+                "ppsGuid": "",
+                "facilityId": 0
+            },
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json",
+                "Referer": "https://univer.dvfu.ru/schedule",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        ) as res:
+            data = await res.json()
+            events = data.get("events", [])
+        
     days = {}
     for event in events:
         day = event["start"][:10]
@@ -50,33 +51,33 @@ def get_schedule():
     return "\n".join(lines)
 
 
-def get_schedule_raw():
-    session = requests.Session()
-    session.get("https://univer.dvfu.ru/schedule")
+async def get_schedule_raw():
+    async with aiohttp.ClientSession() as ses:
+        await ses.get("https://univer.dvfu.ru/schedule")
 
-    date = datetime.now()
-    start = date - timedelta((date.weekday() + 1) % 7)
-    end = start + timedelta(6)
+        date = datetime.now()
+        start = date - timedelta((date.weekday() + 1) % 7)
+        end = start + timedelta(6)
 
-    response = session.get(
-        "https://univer.dvfu.ru/schedule/get",
-        params={
-            "type": "agendaWeek",
-            "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
-            "groups[]": "6886",
-            "ppsGuid": "",
-            "facilityId": 0
-        },
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json",
-            "Referer": "https://univer.dvfu.ru/schedule",
-            "X-Requested-With": "XMLHttpRequest"
-        }
-    )
-
-    events = response.json().get("events", [])
+        async with ses.get(
+            "https://univer.dvfu.ru/schedule/get",
+            params={
+                "type": "agendaWeek",
+                "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
+                "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
+                "groups[]": "6886",
+                "ppsGuid": "",
+                "facilityId": 0
+            },
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "application/json",
+                "Referer": "https://univer.dvfu.ru/schedule",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        ) as res:
+            data = await res.json()
+            events = data.get("events", [])
     
     days = {}
     for event in events:

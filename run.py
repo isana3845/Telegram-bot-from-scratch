@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os
 from base import AsyncBot, InlineKeyboard
 import asyncio
-from schedule import get_schedule
 from datetime import datetime
 from schedule import get_schedule, get_schedule_raw
 
@@ -25,7 +24,7 @@ keyboard.add_button("nya", "kkk")
 
 async def send_day(query, day_index):
     chat_id = query["message"]["chat"]["id"]
-    days = get_schedule_raw()
+    days = await get_schedule_raw()
     target = next(
         (d for d in days if datetime.strptime(d, "%Y-%m-%d").weekday() == day_index),
         None
@@ -71,7 +70,7 @@ async def day_5(query):
 @bot.handlers.on_callback("day_all")
 async def day_all(query):
     chat_id = query["message"]["chat"]["id"]
-    days = get_schedule_raw()
+    days = await get_schedule_raw()
     if not days:
         await bot.send_message(chat_id=chat_id, text="На этой неделе пар нет!")
         return
@@ -101,7 +100,8 @@ async def meow(message):
 @bot.handlers.command("/schedule", priority=0)
 async def schedule(message):
     chat_id = message["chat"]["id"]
-    await bot.send_message(chat_id=chat_id, text=get_schedule())
+    text = await get_schedule()
+    await bot.send_message(chat_id=chat_id, text=text)
 
 
 @bot.handlers.on_text(":3", priority=1000)
