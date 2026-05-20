@@ -4,6 +4,8 @@ import json
 from typing import Callable, Optional, Dict, Any
 from handlers.handlers import AHandler
 import os
+import certifi
+import ssl
 import socket
 
 class InlineKeyboard:
@@ -30,10 +32,23 @@ class AsyncBot:
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
         self.handlers = AHandler()
         self.session = None
+        self.proxy = "http://127.0.0.1:10808"
 
     async def start_session(self):
-        conn = aiohttp.TCPConnector(family=socket.AF_INET) #меняем IPv6 на IPv4(старый)
-        self.session = aiohttp.ClientSession(connector = conn)
+        ssl_context = ssl.create_default_context(cafile = certifi.where())
+
+        connector = aiohttp.TCPConnector(
+            family = socket.AF_INET,
+            ssl = ssl_context,
+        )
+        timeout = aiohttp.ClientTimeout(total = 300)
+
+        self.session = aiohttp.ClientSession(
+            connector = connector,
+            timeout = timeout,
+            proxy = self.proxy
+        )
+        print("Сессия запущена с прокси")
 
     async def close_session(self):
         if self.session:
@@ -60,7 +75,7 @@ class AsyncBot:
 
     async def _requests(self, method, json_data):
         if not self.session:
-            raise Exception
+            raise Exception("Сессия не запустилась 0")
         
         url = f'{self.bot}/{method}'
 
@@ -117,7 +132,7 @@ class AsyncBot:
             
     async def get_updates(self):
         if not self.session:
-            raise Exception
+            raise Exception("Сессия не запустилась 1")
         
         offset = 0
 
@@ -127,6 +142,7 @@ class AsyncBot:
 
                 async with self.session.get(f"{self.bot}/getUpdates", params=params) as aio:
                     response = await aio.json()
+                    print("Ответ получен")
 
                 if response["result"]:
                     for update in response["result"]:
