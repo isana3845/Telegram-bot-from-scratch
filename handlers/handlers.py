@@ -42,15 +42,15 @@ class Handler:
         return self.on('callback', data=data, priority=priority)
     
 
-    def handle_callback(self, query: Dict[str, Any]):
+    async def handle_callback(self, query: Dict[str, Any]):
         data = query.get("data", "")
 
         for handler in self.handlers:
             if handler['type'] == 'callback' and handler['filters'].get('data') == data:
-                return handler['function'](query)           
+                return await handler['function'](query)           
     
 
-    def handle_message(self, message: Dict[str, Any]):
+    async def handle_message(self, message: Dict[str, Any]):
         text = message.get('text', '')
         is_command = text.startswith('/') if text else False
         command_name = text[1:].split()[0] if is_command else None
@@ -106,7 +106,7 @@ class Handler:
             
             # Если дошли сюда - обработчик подходит
             print(f"{handler['function'].__name__}")
-            return handler['function'](message)
+            return await handler['function'](message)
         
         print("Ни один обработчик не подошел")
         return None

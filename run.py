@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 import os
+import asyncio
 from base import Bot
-from schedule import get_schedule, get_schedule_raw
+from schedule import get_schedule, send_day
 from keyboard import InlineKeyboard
 from datetime import datetime
 
@@ -24,108 +25,98 @@ keyboard.new_row()
 keyboard.add_button("📅 Вся неделя", "day_all")
 
 
-def send_day(query, day_index):
-    chat_id = query["message"]["chat"]["id"]
-    days = get_schedule_raw()
-    target = next(
-        (d for d in days if datetime.strptime(d, "%Y-%m-%d").weekday() == day_index),
-        None
-    )
-    if not target:
-        bot.send_message(chat_id=chat_id, text=f"В {DAY_NAMES[day_index]} пар нет!")
-        return
-    
-    dt = datetime.strptime(target, "%Y-%m-%d")
-    lines = [f"📅 {DAY_NAMES[dt.weekday()]} {dt.strftime('%d.%m')}"]
-    for e in sorted(days[target], key=lambda x: x["start"]):
-        lines.append(f"{e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
-        lines.append(f"{e['title']} | {e['classroom']}")
-        
-    bot.send_message(chat_id=chat_id, text="\n".join(lines))
-
-
 @bot.handlers.on_callback("day_0")
-def day_0(query):
-    send_day(query, 0)
+async def day_0(query):
+    await send_day(query, 0, bot)
 
 @bot.handlers.on_callback("day_1")
-def day_1(query):
-    send_day(query, 1)
+async def day_1(query):
+    await send_day(query, 1, bot)
 
 @bot.handlers.on_callback("day_2")
-def day_2(query):
-    send_day(query, 2)
+async def day_2(query):
+    await send_day(query, 2, bot)
 
 @bot.handlers.on_callback("day_3")
-def day_3(query):
-    send_day(query, 3)
+async def day_3(query):
+    await send_day(query, 3, bot)
 
 @bot.handlers.on_callback("day_4")
-def day_4(query):
-    send_day(query, 4)
+async def day_4(query):
+    await send_day(query, 4, bot)
 
 @bot.handlers.on_callback("day_5")
-def day_5(query):
-    send_day(query, 5)
+async def day_5(query):
+    await send_day(query, 5, bot)
 
 
 @bot.handlers.on_callback("day_all")
-def day_all(query):
+async def day_all(query):
     chat_id = query["message"]["chat"]["id"]
-    days = get_schedule_raw()
+    days = get_schedule()
     if not days:
-        bot.send_message(chat_id=chat_id, text="На этой неделе пар нет!")
+        await bot.send_message(chat_id=chat_id, text="На этой неделе пар нет!")
         return
     for day in sorted(days):
         dt = datetime.strptime(day, "%Y-%m-%d")
         lines = [f"📅 {DAY_NAMES[dt.weekday()]} {dt.strftime('%d.%m')}"]
+        lines.append("-" * 60)
         for e in sorted(days[day], key=lambda x: x["start"]):
             lines.append(f"{e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
-            lines.append(f"{e['title']} | {e['classroom']}")
-        bot.send_message(chat_id=chat_id, text="\n".join(lines))
+            lines.append(f"{e['title']} | {e['classroom']}\n")
+        await bot.send_message(chat_id=chat_id, text="\n".join(lines))
 
 
 @bot.handlers.command("/start")
-def meow(message):
+async def meow(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="Я дура\nкоманды:\n/meow\n/schedule\n на :3 отвечает UwU, а на любое сообщение будет отвечать OWO")
-    bot.send_photo(chat_id, "123.png")
+    await bot.send_message(chat_id=chat_id, text="Я дура\nкоманды:\n/meow\n/schedule\n на :3 отвечает UwU, а на любое сообщение будет отвечать OWO")
 
 
 @bot.handlers.command("/meow", priority=100)
-def meow(message):
+async def meow(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="meow meow meow", reply_markup=keyboard())
+    await bot.send_message(chat_id=chat_id, text="meow meow meow")
 
 
 @bot.handlers.command("/schedule", priority=0)
-def schedule(message):
+async def schedule(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
 
 @bot.handlers.on_text(":3", priority=1000)
-def uwu(message):
+async def uwu(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="UwU")
+    await bot.send_message(chat_id=chat_id, text="UwU")
 
 
 @bot.handlers.on_text("bruh", priority=1000)
-def owo(message):
+async def owo(message):
     chat_id = message["chat"]["id"]
-    bot.send_poll(chat_id, "Вы тупой?", "Да", "Конечно")
+    await bot.send_poll(chat_id, "Вы крутой?", "Да", "Конечно")
 
 
 @bot.handlers.on_photo()
-def give(message):
+async def give(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="Краду твою кариночку")
-    bot.get_file(message)
+    await bot.send_message(chat_id=chat_id, text="Краду твою картиночку")
+    await bot.get_file(message)
 
 
 @bot.handlers.on_any()
-def bbbb(message):
+async def bbbb(message):
     chat_id = message["chat"]["id"]
-    bot.send_message(chat_id=chat_id, text="OWO")
+    await bot.send_message(chat_id=chat_id, text="OWO")
 
-bot.get_updates()
+
+async def main():
+    await bot.start_session()
+    try:
+        await bot.get_updates()
+    except Exception as e:
+        print(f"error: {e}")
+    finally:
+        await bot.close_session()
+
+asyncio.run(main())
