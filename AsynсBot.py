@@ -2,9 +2,9 @@ import aiohttp
 import asyncio
 import json
 from typing import Callable, Optional, Dict, Any
-from dotenv import load_dotenv
 from handlers.handlers import AHandler
 import os
+import socket
 
 class InlineKeyboard:
     def __init__(self):
@@ -32,7 +32,8 @@ class AsyncBot:
         self.session = None
 
     async def start_session(self):
-        self.session = aiohttp.ClientSession()
+        conn = aiohttp.TCPConnector(family=socket.AF_INET) #меняем IPv6 на IPv4(старый)
+        self.session = aiohttp.ClientSession(connector = conn)
 
     async def close_session(self):
         if self.session:
@@ -51,7 +52,6 @@ class AsyncBot:
                     file_name = file_path['result']['file_path'].split("/")[-1]
                     async with self.session.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}") as aii:
                         response = await aii.read()
-                    # response = requests.get(f"https://api.telegram.org/file/bot{self.bot_token}/{file_path['result']['file_path']}")
                     with open(f"{save_path}/{file_name}".strip("/"), "wb") as f:
                         f.write(response)
                     return response
@@ -88,14 +88,6 @@ class AsyncBot:
     
     async def send_message(self, **params): #в aiohttp уже json
         return await self._requests("sendMessage", json_data=params)
-    
-    # async def send_message(self, chat_id, text):
-    #     data = {
-    #         "chat_id": chat_id,
-    #         "text": text
-    #     }
-
-    #     return await self._aiohttp("sendMessage", json_data=data)
 
     async def send_photo(self, chat_id, photo_path):
         if not self.session:

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-from base import AsyncBot, InlineKeyboard
+from AsynсBot import AsyncBot, InlineKeyboard
 import asyncio
 from datetime import datetime
 from schedule import get_schedule, get_schedule_raw
@@ -92,7 +92,7 @@ async def meow(message):
 
 
 @bot.handlers.command("/meow", priority=100)
-async def meow(message):
+async def meo(message):
     chat_id = message["chat"]["id"]
     await bot.send_message(chat_id, "meow meow meow", reply_markup=keyboard())
 
