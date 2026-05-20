@@ -2,6 +2,7 @@ import requests
 from dotenv import load_dotenv
 import os
 import json
+from rate_limiter import RateLimiter
 
 load_dotenv()
 
@@ -38,6 +39,24 @@ class Bot:
         }
 
         return self._requests("sendMessage", params=params)
+
+    async def proccess_message(self, message):
+        try:
+            response = await self.handlers.handle_message(message)
+
+            if response and isinstance(response, dict) and response.get("error") == "rate_limit":
+                chat_id = message.get("chat", {}).get("id")
+                wait_time = response.get("wait_time", 1)
+                await self.send_message(
+                    chat_id=chat_id,
+                    text=f"⏰ Слишком много сообщений! Подождите {wait_time:.1f} секунд."
+                )
+                return {"ok": False, "rate_limited": True}
+
+            return response
+        except Exception as e:
+            print(f"Error in process_message: {e}")
+            return {"ok": False}
 
 
     def proccess_message(self, message):
