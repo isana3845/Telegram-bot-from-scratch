@@ -1,9 +1,10 @@
 import requests
 import asyncio
 import json
+import os
+from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 from handlers.handlers import Handler
-import os
 
 class InlineKeyboard:
     def __init__(self):
@@ -26,6 +27,28 @@ class Bot:
         self.bot = f"https://api.telegram.org/bot{self.bot_token}"
         self.handlers = Handler()
     
+    def _log_action(self, action_type, chat_id, data):
+        """Метод для логирования данных в JSON файл."""
+        log_file = "bot_logs.json"
+        logs = []
+        
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    logs = json.load(f)
+            except json.JSONDecodeError:
+                pass
+        
+        logs.append({
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "type": action_type,
+            "chat_id": chat_id,
+            "data": data
+        })
+        
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(logs, f, ensure_ascii=False, indent=4)
+
     def get(self, method):
         return requests.get(f"{self.bot}/{method}").json()
     
@@ -57,20 +80,21 @@ class Bot:
             return response.json()
         except Exception as e:
             print(f"error: {e}")
+
     def send_poll(self, chat_id, question, *args):
-          params = {
-          "chat_id": chat_id,
-          "question": question,
-          "options": json.dumps(args)
-          }
-          
-          return self._requests("sendPoll", params)
+        params = {
+            "chat_id": chat_id,
+            "question": question,
+            "options": json.dumps(args)
+        }
+        self._log_action("bot_send_poll", chat_id, {"question": question})
+        return self._requests("sendPoll", params)
 
     def send_message(self, **params):
         if "reply_markup" in params:
-              params["reply_markup"] = json.dumps(params["reply_markup"])
-        return self._requests("sendMessage", params=params)
-
+            params["reply_markup"] = json.dumps(params["reply_markup"])
+        
+        self._log_action("bot_send_message", params.get("chat_id"), {"text": params.get("text")})
         return self._requests("sendMessage", params=params)
 
     def send_photo(self, chat_id, photo_path):
@@ -78,29 +102,46 @@ class Bot:
         with open(photo_path, 'rb') as photo:
             files = {'photo': photo}
             data = {'chat_id': chat_id}
+            
+            self._log_action("bot_send_photo", chat_id, {"photo_path": photo_path})
             response = requests.post(url, files=files, data=data)
         return response
         
-
     def proccess_message(self, message):
         try:
-              response = self.handlers.handle_message(message["message"])
-              return response
-        except Exception as e:
-              return {"ok": False}
-        
+            # Логирование входящего сообщения пользователя
+            msg_data = message.get("message", {})
+            chat_id = msg_data.get("chat", {}).get("id")
             
+            if chat_id:
+                text = msg_data.get("text", "<media_or_other>")
+                self._log_action("user_message", chat_id, {"text": text})
+
+            response = self.handlers.handle_message(message["message"])
+            return response
+        except Exception as e:
+            return {"ok": False}
+        
     def get_updates(self):
         offset = 0
 
         while True:
-              params = {'offset': offset, 'timeout': 30}
-
-              response = requests.get(f"{self.bot}/getUpdates", params=params).json()
-
-              if response["result"]:
-                  for update in response["result"]:
-                      print(update)
-                      self.proccess_message(update)
+            params = {'offset': offset, 'timeout': 30}
+            
+            try:
+                response = requests.get(f"{self.bot}/getUpdates", params=params).json()
                 
-                      offset = update["update_id"] + 1
+                # Проверяем, что запрос прошел успешно и в ответе есть ключ 'result'
+                if response.get("ok") and "result" in response:
+                    for update in response["result"]:
+                        print(update)
+                        self.proccess_message(update)
+                        offset = update["update_id"] + 1
+                else:
+                    print(f"Ошибка от Telegram API: {response}")
+                    # Небольшая пауза, чтобы не спамить запросами в случае ошибки сервера
+                    asyncio.run(asyncio.sleep(3)) 
+                    
+            except Exception as e:
+                print(f"Ошибка сети или парсинга: {e}")
+                asyncio.run(asyncio.sleep(3))
