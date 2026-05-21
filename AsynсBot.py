@@ -6,6 +6,8 @@ from handlers.handlers import AHandler
 import os
 import certifi
 import ssl
+from datetime import datetime
+from rite_limiter import RateLimiter
 import socket
 
 class InlineKeyboard:
@@ -33,6 +35,28 @@ class AsyncBot:
         self.handlers = AHandler()
         self.session = None
         self.proxy = "http://127.0.0.1:10808"
+
+    def _log_action(self, action_type, chat_id, data):
+        #Метод для логирования данных в JSON файл.
+        log_file = "bot_logs.json"
+        logs = []
+        
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    logs = json.load(f)
+            except json.JSONDecodeError:
+                pass
+        
+        logs.append({
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "type": action_type,
+            "chat_id": chat_id,
+            "data": data
+        })
+        
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(logs, f, ensure_ascii=False, indent=4)
 
     async def start_session(self):
         ssl_context = ssl.create_default_context(cafile = certifi.where())
@@ -99,9 +123,11 @@ class AsyncBot:
             "options": list(args)
             }
             
+            self._log_action("bot_send_poll", chat_id, {"question": question})
             return await self._requests("sendPoll", params)
     
     async def send_message(self, **params): #в aiohttp уже json
+        self._log_action("bot_send_message", params.get("chat_id"), {"text": params.get("text")})
         return await self._requests("sendMessage", json_data=params)
 
     async def send_photo(self, chat_id, photo_path):
@@ -115,6 +141,7 @@ class AsyncBot:
                 form_data.add_field('photo', photo)
                 form_data.add_field('chat_id', str(chat_id))
 
+                self._log_action("bot_send_photo", chat_id, {"photo_path": photo_path})
                 async with self.session.post(url, data=form_data) as aio:
                     return await aio.json()
                 
@@ -124,7 +151,26 @@ class AsyncBot:
 
     async def proccess_message(self, message):
         try:
+            # Логирование входящего сообщения пользователя
+            msg_data = message.get("message", {})
+            chat_id = msg_data.get("chat", {}).get("id")
+            
+            if chat_id:
+                text = msg_data.get("text", "<media_or_other>")
+                self._log_action("user_message", chat_id, {"text": text})
+                
             response = await self.handlers.handle_message(message)
+
+            #лимит
+            if response and isinstance(response, dict) and response.get("error") == "rate_limit":
+                chat_id = message.get("chat", {}).get("id")
+                wait_time = response.get("wait_time", 1)
+                await self.send_message(
+                    chat_id=chat_id,
+                    text=f"Слишком много сообщений. Подождите {wait_time:.1f} секунд."
+                )
+                return {"ok": False, "rate_limited": True}
+            
             return response
         except Exception as e:
             return {"ok": False}
@@ -142,12 +188,24 @@ class AsyncBot:
 
                 async with self.session.get(f"{self.bot}/getUpdates", params=params) as aio:
                     response = await aio.json()
-                    print("Ответ получен")
+                    
 
-                if response["result"]:
+                if response.get("ok") and "result" in response:
                     for update in response["result"]:
                         print(update)
-                        await self.proccess_message(update['message'])
+                        if 'message' in update:
+                            await self.proccess_message(update)
+                            
+                        elif 'callback_query' in update:
+                            result = await self.handlers.handle_callback(update['callback_query'])
+
+                            if isinstance(result, dict) and result.get("error") == "rate_limit":
+                                chat_id = update['callback_query'].get('message', {}).get('chat', {}).get('id')
+                                if chat_id:
+                                    await self.send_message(
+                                        chat_id=chat_id,
+                                        text=f"Подождите {result.get('wait_time', 1):.1f} секунд"
+                                        )
                 
                         offset = update["update_id"] + 1
 

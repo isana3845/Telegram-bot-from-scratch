@@ -1,9 +1,14 @@
 from typing import Callable, Optional, Dict, Any
 import asyncio
 
+
 class AHandler:
     def __init__(self):
         self.handlers = []
+        self.rate_limiter = None
+
+    def set_rate_limiter(self, rate_limiter):
+        self.rate_limiter = rate_limiter
     
     def on(self, msg_type: str = 'any', **filters):
         def decorator(func: Callable):
@@ -36,6 +41,11 @@ class AHandler:
     
     async def handle_callback(self, query: Dict[str, Any]):
         data = query.get("data", "")
+        user_id = query.get("from", {}).get("id", 0)
+
+        if self.rate_limiter and not self.rate_limiter.can_send(user_id):
+            wait_time = self.rate_limiter.get_wait_time(user_id)
+            return {"error": "rate_limit", "wait_time": wait_time, "type": "callback"}
 
         for handler in self.handlers:
             if handler['type'] == 'callback' and handler['filters'].get('data') == data:
@@ -43,6 +53,12 @@ class AHandler:
     
     
     async def handle_message(self, message: Dict[str, Any]):
+        user_id = message.get('from', {}).get('id', 0)
+
+        if self.rate_limiter and not self.rate_limiter.can_send(user_id):
+            wait_time = self.rate_limiter.get_wait_time(user_id)
+            return {"error": "rate_limit", "wait_time": wait_time}
+    
         text = message.get('text', '')
         is_command = text.startswith('/') if text else False
         command_name = text[1:].split()[0] if is_command else None
