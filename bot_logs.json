@@ -1,0 +1,58 @@
+[
+    {
+        "time": "2026-05-21 15:25:42",
+        "type": "user_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "/start"
+        }
+    },
+    {
+        "time": "2026-05-21 15:25:55",
+        "type": "user_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "/meow"
+        }
+    },
+    {
+        "time": "2026-05-21 15:26:01",
+        "type": "user_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "/schedule"
+        }
+    },
+    {
+        "time": "2026-05-21 15:26:13",
+        "type": "user_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "/schedule"
+        }
+    },
+    {
+        "time": "2026-05-21 15:30:16",
+        "type": "bot_send_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "Я дура\nкоманды:\n/meow\n/schedule\n на :3 отвечает UwU, а на любое сообщение будет отвечать OWO"
+        }
+    },
+    {
+        "time": "2026-05-21 15:30:19",
+        "type": "bot_send_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "meow meow meow"
+        }
+    },
+    {
+        "time": "2026-05-21 15:30:29",
+        "type": "bot_send_message",
+        "chat_id": 1134128079,
+        "data": {
+            "text": "Выбери день:"
+        }
+    }
+]

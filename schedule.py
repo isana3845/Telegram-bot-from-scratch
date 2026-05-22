@@ -1,27 +1,36 @@
-import asyncio
-import aiohttp
-import json
-import os
+import requests
 from datetime import datetime, timedelta
+import json
+import asyncio
+import os
 
-CACHE_FILE = "schedule_cache.json"
 
-#Внутренняя функция для отправки запроса на сайт ДВФУ.
-async def fetch_from_site():
-    async with aiohttp.ClientSession() as ses:
-        await ses.get("https://univer.dvfu.ru/schedule")
+
+class Schedule:
+    def init(self, group = "6886"):
+          self.group = group
+          
+    def change_group(self, group):
+          self.group = group
+     
+    def fetch_from_site(self, offset):
+        """Внутренняя функция для отправки запроса на сайт ДВФУ."""
+        session = requests.Session()
+        session.get("https://univer.dvfu.ru/schedule")
+
 
         date = datetime.now()
-        start = date - timedelta((date.weekday() + 1) % 7)
+        date_with_offset = date + timedelta(weeks=offset)  # Добавляем смещение недель
+        start = date_with_offset - timedelta((date_with_offset.weekday() + 1) % 7)
         end = start + timedelta(6)
 
-        async with ses.get(
+        response = session.get(
             "https://univer.dvfu.ru/schedule/get",
             params={
                 "type": "agendaWeek",
                 "start": f"{start.strftime('%Y-%m-%d')}T14:00:00.000Z",
                 "end": f"{end.strftime('%Y-%m-%d')}T14:00:00.000Z",
-                "groups[]": "6886",
+                "groups[]": self.group,
                 "ppsGuid": "",
                 "facilityId": 0
             },
@@ -31,64 +40,113 @@ async def fetch_from_site():
                 "Referer": "https://univer.dvfu.ru/schedule",
                 "X-Requested-With": "XMLHttpRequest"
             }
-        ) as res:
-            data = await res.json()
-            events = data.get("events", [])
+        )
+        return response.json().get("events", [])
 
-    days = {}
-    for event in events:
-        day = event["start"][:10]
-        days.setdefault(day, []).append(event)
-    return days
-
-
-async def get_schedule():
-    today_str = datetime.now().strftime("%Y-%m-%d")
-    events = []
-    
-    # Пытаемся загрузить данные из кэша
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                cache_data = json.load(f)
-                # Если кэш создан сегодня, используем его
-                if cache_data.get("cache_date") == today_str:
+    def get_schedule(self, offset=0):
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        events = []
+        
+        if os.path.exists(f"schedule_cache{self.group}.json"):
+            try:
+                with open(f"schedule_cache{self.group}.json", "r", encoding="utf-8") as f:
+                    cache_data = json.load(f)
+                # Проверяем кэш с учетом offset
+                if cache_data.get("cache_date") == today_str and cache_data.get("offset") == offset:
                     events = cache_data.get("events", [])
                     print("Расписание загружено из локального кэша.")
-        except Exception as e:
-            print(f"Ошибка чтения кэша: {e}")
+            except Exception as e:
+                print(f"Ошибка чтения кэша: {e}")
 
-    # Если кэш пустой или устарел, качаем заново и обновляем файл
-    if not events:
-        try:
-            events = await fetch_from_site()
-            cache_data = {
-                "cache_date": today_str,
-                "events": events
-            }
-            with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=4)
-            print("Расписание успешно обновлено с сайта и сохранено в кэш.")
-        except Exception as e:
-            print(f"Ошибка при запросе к сайту: {e}")
-            return "Не удалось получить расписание (ошибка сети)."
+        if not events:
+            try:
+                events = self.fetch_from_site(offset)
+                cache_data = {
+                    "cache_date": today_str,
+                    "offset": offset,  # Сохраняем offset в кэш
+                    "events": events
+                }
+                with open(f"schedule_cache{self.group}.json", "w", encoding="utf-8") as f:
+                    json.dump(cache_data, f, ensure_ascii=False, indent=4)
+                print("Расписание успешно обновлено с сайта и сохранено в кэш.")
+            except Exception as e:
+                print(f"Ошибка при запросе к сайту: {e}")
+                return {}
 
-    # Дальнейшая обработка и форматирование текста (осталась без изменений)
-    days = {}
-    for event in events:
-        day = event["start"][:10]
-        days.setdefault(day, []).append(event)
+        days = {}
+        for event in events:
+            day = event["start"][:10]
+            days.setdefault(day, []).append(event)
+        return days
 
-    day_names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-    lines = []
-    for day in sorted(days):
-        dt = datetime.strptime(day, "%Y-%m-%d")
-        lines.append(f"📅 {day_names[dt.weekday()]} {dt.strftime('%d.%m')}")
-        lines.append("-" * 70)
+    async def send_day(self, query, day_index, bot):
+        DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        chat_id = query["message"]["chat"]["id"]
+        message_id = query.get("message", {}).get("message_id")
 
-        for e in sorted(days[day], key=lambda x: x["start"]):
-            lines.append(f"  {e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
-            lines.append(f"  {e['title']} | {e['classroom']}\n")
-        lines.append("\n\n")
+        callback_data = query.get("data", "")
+        
+        group = "6886"  # Значение по умолчанию
+        if callback_data in ["6885", "6886"]:
+            group = callback_data
+        
 
-    return "\n".join(lines)
+        offset = query.get("offset", 0)  # Если offset передан в query
+        if callback_data == "n_w":
+            offset = query.get("offset", 0) + 1  # Увеличиваем offset на следующую неделю
+            group = query.get("group", "6886")  # Сохраняем группу
+
+        # Запускаем синхронный get_schedule в отдельном потоке
+        loop = asyncio.get_event_loop()
+        days = await loop.run_in_executor(None, self.get_schedule, offset)
+        if not days:
+            await bot.send_message(
+                chat_id=chat_id, 
+                text="❌ Не удалось загрузить расписание. Попробуйте позже."
+            )
+            return
+
+        # Ищем нужный день
+        target = None
+        for d in days.keys():
+            try:
+                if datetime.strptime(d, "%Y-%m-%d").weekday() == day_index:
+                    target = d
+                    break
+            except ValueError as e:
+                print(f"Ошибка парсинга даты {d}: {e}")
+                continue
+
+        if not target:
+            await bot.send_message(
+                chat_id=chat_id, 
+                text=f"📭 В {DAY_NAMES[day_index]} пар нет!"
+            )
+            return
+
+        # Форматируем расписание
+        dt = datetime.strptime(target, "%Y-%m-%d")
+        lines = [f"📅 {DAY_NAMES[dt.weekday()]} {dt.strftime('%d.%m')}"]
+        if offset != 0:  # Показываем offset если не текущая неделя
+            lines.append(f"📆 Неделя {offset:+d}")
+        lines.append("-" * 60)
+        
+        for e in sorted(days[target], key=lambda x: x["start"]):
+            start_time = e['start'][11:16]
+            end_time = e['end'][11:16]
+            subject = e.get('title', 'Без названия')
+            classroom = e.get('classroom', 'Не указано')
+            load = e.get('pps_load', '')
+            
+            lines.append(f"{start_time}-{end_time} {load}")
+            lines.append(f"{subject} | {classroom}\n")
+
+        message_text = "\n".join(lines)
+        if len(message_text) > 4096:
+            for i in range(0, len(message_text), 4096):
+                await bot.send_message(
+                    chat_id=chat_id, 
+                    text=message_text[i:i+4096]
+                )
+        else:
+            await bot.send_message(chat_id=chat_id, text=message_text)

@@ -1,23 +1,30 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 import asyncio
-from AsynсBot import AsyncBot, InlineKeyboard
-from schedule import get_schedule
+from base import Bot
+from schedule import Schedule
+from keyboard import InlineKeyboard
 from datetime import datetime
-from rite_limiter import RateLimiter
 
-load_dotenv()
+#6885
+#6886
+
+g = {
+"6886": "РУЦП",
+"6885": "ПИ"
+}
+
+schedule = Schedule()
 
 BOT_TOKEN = os.getenv("KEY")
 print(BOT_TOKEN)
-bot = AsyncBot(BOT_TOKEN)
-
-rate_limiter = RateLimiter(max_messages=3, time_window=5.0)
-bot.handlers.set_rate_limiter(rate_limiter)
+bot = Bot(BOT_TOKEN)
 
 DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
 keyboard = InlineKeyboard()
+
+
 for i in range(4):
     keyboard.add_button(DAY_NAMES[i], f"day_{i}")
     if i == 2:
@@ -26,37 +33,95 @@ keyboard.add_button(DAY_NAMES[4], "day_4")
 keyboard.add_button(DAY_NAMES[5], "day_5")
 keyboard.new_row()
 keyboard.add_button("📅 Вся неделя", "day_all")
+keyboard.add_button("📅 Следующая неделя", "n_w")
+keyboard.new_row()
+keyboard.add_button("РуЦП", "6886")
+keyboard.add_button("ПИ", "6885")
 
 
-# @bot.handlers.on_callback("day_0")
-# async def day_0(query):
-#     await send_day(query, 0, bot)
 
-# @bot.handlers.on_callback("day_1")
-# async def day_1(query):
-#     await send_day(query, 1, bot)
+@bot.handlers.on_callback("day_0")
+async def day_0(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 0, bot)
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
-# @bot.handlers.on_callback("day_2")
-# async def day_2(query):
-#     await send_day(query, 2, bot)
+@bot.handlers.on_callback("day_1")
+async def day_1(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 1, bot)
+    
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
-# @bot.handlers.on_callback("day_3")
-# async def day_3(query):
-#     await send_day(query, 3, bot)
+@bot.handlers.on_callback("day_2")
+async def day_2(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 2, bot)
+    
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
-# @bot.handlers.on_callback("day_4")
-# async def day_4(query):
-#     await send_day(query, 4, bot)
+@bot.handlers.on_callback("day_3")
+async def day_3(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 3, bot)
 
-# @bot.handlers.on_callback("day_5")
-# async def day_5(query):
-#     await send_day(query, 5, bot)
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
+@bot.handlers.on_callback("day_4")
+async def day_4(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 4, bot)
+
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
+
+@bot.handlers.on_callback("day_5")
+async def day_5(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    await schedule.send_day(query, 5, bot)
+
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
+
+@bot.handlers.on_callback("6885")
+async def change(query):
+    schedule.change_group("6885")
+    
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    
+    await bot.send_message(chat_id=chat_id, text="Выбрана новая группа: ПИ")
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
+
+@bot.handlers.on_callback("6886")
+async def change(query):
+    schedule.change_group("6886")
+    
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    
+    await bot.send_message(chat_id=chat_id, text="Выбрана новая группа: РуЦП")
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
 @bot.handlers.on_callback("day_all")
 async def day_all(query):
     chat_id = query["message"]["chat"]["id"]
-    days = await get_schedule()
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    
+    days = schedule.get_schedule()
     if not days:
         await bot.send_message(chat_id=chat_id, text="На этой неделе пар нет!")
         return
@@ -68,37 +133,45 @@ async def day_all(query):
             lines.append(f"{e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
             lines.append(f"{e['title']} | {e['classroom']}\n")
         await bot.send_message(chat_id=chat_id, text="\n".join(lines))
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
-
-@bot.handlers.command("/start")
-async def start_command(message):
-    chat_id = message["chat"]["id"]
-    await bot.send_message(chat_id=chat_id, text="Я дура\nкоманды:\n/meow\n/schedule\n на :3 отвечает UwU, а на любое сообщение будет отвечать OWO")
-
-
-@bot.handlers.command("/meow", priority=100)
-async def meow_command(message):
-    chat_id = message["chat"]["id"]
-    await bot.send_message(chat_id=chat_id, text="meow meow meow")
-
-
-@bot.handlers.command("/schedule", priority=0)
-async def schedule(message):
-    chat_id = message["chat"]["id"]
+@bot.handlers.on_callback("n_w")
+async def day_all(query):
+    chat_id = query["message"]["chat"]["id"]
+    message_id = query["message"]["message_id"]
+    await bot.delete_message(chat_id, message_id)
+    
+    days = schedule.get_schedule(offset=1)
+    if not days:
+        await bot.send_message(chat_id=chat_id, text="На этой неделе пар нет!")
+        return
+    for day in sorted(days):
+        dt = datetime.strptime(day, "%Y-%m-%d")
+        lines = [f"📅 {DAY_NAMES[dt.weekday()]} {dt.strftime('%d.%m')}"]
+        lines.append("-" * 60)
+        for e in sorted(days[day], key=lambda x: x["start"]):
+            lines.append(f"{e['start'][11:16]}-{e['end'][11:16]} {e['pps_load']}")
+            lines.append(f"{e['title']} | {e['classroom']}\n")
+        await bot.send_message(chat_id=chat_id, text="\n".join(lines))
     await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
 
-@bot.handlers.on_text(":3", priority=1000)
-async def uwu(message):
+
+@bot.handlers.command("/start")
+async def meow(message):
     chat_id = message["chat"]["id"]
-    await bot.send_message(chat_id=chat_id, text="UwU")
+    await bot.send_message(chat_id=chat_id, text="Здравствуйте! Вас приветствует персональный помощник!\nВы можете получить расписание по команде /schedule/nУзнать текущую группу: /group")
 
 
-@bot.handlers.on_text("bruh", priority=1000)
-async def owo(message):
+@bot.handlers.command("/schedule", priority=0)
+async def sch(message):
     chat_id = message["chat"]["id"]
-    await bot.send_poll(chat_id, "Вы крутой?", "Да", "Конечно")
+    await bot.send_message(chat_id=chat_id, text="Выбери день:", reply_markup=keyboard())
 
+@bot.handlers.command("/group")
+async def gr(message):
+      chat_id = message["chat"]["id"]
+      await bot.send_message(chat_id=chat_id, text=f"Ваша текущая группа {g[schedule.group]}!\nГотовы узнать свое расписание?", reply_markup=keyboard())
 
 @bot.handlers.on_photo()
 async def give(message):
@@ -110,7 +183,7 @@ async def give(message):
 @bot.handlers.on_any()
 async def bbbb(message):
     chat_id = message["chat"]["id"]
-    await bot.send_message(chat_id=chat_id, text="OWO")
+    await bot.send_message(chat_id=chat_id, text="ничего интересного")
 
 
 async def main():
@@ -118,6 +191,7 @@ async def main():
     try:
         await bot.get_updates()
     except Exception as e:
+        raise e
         print(f"error: {e}")
     finally:
         await bot.close_session()

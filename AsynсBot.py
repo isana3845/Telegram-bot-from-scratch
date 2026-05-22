@@ -36,8 +36,8 @@ class AsyncBot:
         self.session = None
         self.proxy = "http://127.0.0.1:10808"
 
+    #Метод для логирования данных в JSON файл.
     def _log_action(self, action_type, chat_id, data):
-        #Метод для логирования данных в JSON файл.
         log_file = "bot_logs.json"
         logs = []
         
@@ -194,8 +194,9 @@ class AsyncBot:
                     for update in response["result"]:
                         print(update)
                         if 'message' in update:
-                            await self.proccess_message(update)
-                            
+                            await self.proccess_message(update['message'])
+                        
+                        #лимит для кнопок тоже
                         elif 'callback_query' in update:
                             result = await self.handlers.handle_callback(update['callback_query'])
 
